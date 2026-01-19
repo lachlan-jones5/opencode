@@ -19,6 +19,12 @@ const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
 
+// Support cross-compilation via environment variables
+const envTargetOS = process.env.OPENCODE_BUILD_TARGET_OS
+const envTargetArch = process.env.OPENCODE_BUILD_TARGET_ARCH
+const envTargetABI = process.env.OPENCODE_BUILD_TARGET_ABI
+const envTargetBaseline = process.env.OPENCODE_BUILD_TARGET_BASELINE === "1"
+
 const allTargets: {
   os: string
   arch: "arm64" | "x64"
@@ -80,18 +86,29 @@ const allTargets: {
 
 const targets = singleFlag
   ? allTargets.filter((item) => {
-      if (item.os !== process.platform || item.arch !== process.arch) {
+      // If cross-compilation env vars are set, use them instead of process.platform/arch
+      const targetOS = envTargetOS || process.platform
+      const targetArch = envTargetArch || process.arch
+      const targetABI = envTargetABI
+      const wantBaseline = envTargetBaseline || baselineFlag
+
+      if (item.os !== targetOS || item.arch !== targetArch) {
         return false
       }
 
       // When building for the current platform, prefer a single native binary by default.
       // Baseline binaries require additional Bun artifacts and can be flaky to download.
       if (item.avx2 === false) {
-        return baselineFlag
+        return wantBaseline
       }
 
-      // also skip abi-specific builds for the same reason
+      // also skip abi-specific builds unless specifically requested
       if (item.abi !== undefined) {
+        return item.abi === targetABI
+      }
+
+      // If we want a specific ABI but this item has none, skip it
+      if (targetABI && item.abi !== targetABI) {
         return false
       }
 
