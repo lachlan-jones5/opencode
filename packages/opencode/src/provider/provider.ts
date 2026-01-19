@@ -132,7 +132,11 @@ export namespace Provider {
       return {
         autoload: false,
         async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
-          return shouldUseCopilotResponsesApi(modelID) ? sdk.responses(modelID) : sdk.chat(modelID)
+          if (shouldUseCopilotResponsesApi(modelID)) {
+            return sdk.responses(modelID)
+          }
+          // Fallback: try .chat() first (custom SDK), then .chatModel() (standard @ai-sdk/openai-compatible)
+          return typeof sdk.chat === "function" ? sdk.chat(modelID) : sdk.chatModel(modelID)
         },
         options: {},
       }
@@ -141,7 +145,11 @@ export namespace Provider {
       return {
         autoload: false,
         async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
-          return shouldUseCopilotResponsesApi(modelID) ? sdk.responses(modelID) : sdk.chat(modelID)
+          if (shouldUseCopilotResponsesApi(modelID)) {
+            return sdk.responses(modelID)
+          }
+          // Fallback: try .chat() first (custom SDK), then .chatModel() (standard @ai-sdk/openai-compatible)
+          return typeof sdk.chat === "function" ? sdk.chat(modelID) : sdk.chatModel(modelID)
         },
         options: {},
       }
